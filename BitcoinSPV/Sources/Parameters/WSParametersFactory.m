@@ -29,6 +29,7 @@
 #import "WSParametersFactoryMain.h"
 #import "WSParametersFactoryTestnet3.h"
 #import "WSParametersFactoryRegtest.h"
+#import "WSParametersFactoryEmercoin.h"
 #import "WSErrors.h"
 
 @interface WSParametersFactory ()
@@ -36,6 +37,7 @@
 @property (nonatomic, strong) id<WSParametersFactory> mainFactory;
 @property (nonatomic, strong) id<WSParametersFactory> testnet3Factory;
 @property (nonatomic, strong) id<WSParametersFactory> regtestFactory;
+@property (nonatomic, strong) id<WSParametersFactory> emercoinFactory;
 @property (nonatomic, strong) NSDictionary *mapping;
 
 @end
@@ -56,10 +58,12 @@
 {
     if ((self = [super init])) {
         self.mainFactory = [[WSParametersFactoryMain alloc] init];
+        self.emercoinFactory = [[WSParametersFactoryEmercoin alloc] init];
         self.testnet3Factory = [[WSParametersFactoryTestnet3 alloc] init];
         self.regtestFactory = [[WSParametersFactoryRegtest alloc] init];
 
         self.mapping = @{@(WSNetworkTypeMain): [self.mainFactory parameters],
+                         @(WSNetworkTypeEmercoin): [self.emercoinFactory parameters],
                          @(WSNetworkTypeTestnet3): [self.testnet3Factory parameters],
                          @(WSNetworkTypeRegtest): [self.regtestFactory parameters]};
     }

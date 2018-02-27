@@ -37,18 +37,22 @@
 @class WSSignableTransactionInput;
 @class WSTransactionOutput;
 @class WSAddress;
+@class WSParameters;
 
 #pragma mark -
 
 @protocol WSTransaction <NSObject>
 
 - (uint32_t)version;
+- (uint32_t)time;
+- (WSParameters *)parameters;
 - (NSOrderedSet *)inputs;   // id<WSTransactionInput>
 - (NSOrderedSet *)outputs;  // WSTransactionOutput
 - (uint32_t)lockTime;
 
 - (WSHash256 *)txId;
 - (BOOL)isCoinbase;
+- (void)addTime:(uint32_t)time;
 
 @end
 
@@ -58,10 +62,11 @@
 
 - (instancetype)initWithSignedInputs:(NSOrderedSet *)inputs outputs:(NSOrderedSet *)outputs error:(NSError **)error;
 - (instancetype)initWithVersion:(uint32_t)version
+                           time:(uint32_t)time
                    signedInputs:(NSOrderedSet *)inputs      // WSSignedTransactionInput
                         outputs:(NSOrderedSet *)outputs     // WSTransactionOutput
                        lockTime:(uint32_t)lockTime
-                          error:(NSError **)error;
+                          error:(NSError *__autoreleasing *)error;
 
 - (NSUInteger)size;
 - (WSSignedTransactionInput *)signedInputAtIndex:(uint32_t)index;
@@ -100,6 +105,6 @@
 - (uint64_t)standardFeeWithExtraBytes:(NSUInteger)numberOfBytes;
 
 // map keys by address
-- (WSSignedTransaction *)signedTransactionWithInputKeys:(NSDictionary *)keys error:(NSError **)error;
+- (WSSignedTransaction *)signedTransactionWithInputKeys:(NSDictionary *)keys error:(NSError **)error param:(WSParameters *)param;
 
 @end

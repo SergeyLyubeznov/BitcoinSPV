@@ -35,7 +35,7 @@
 
 NSString *const         WSBIP39WordsResource                    = @"WSBIP39Words";
 NSString *const         WSBIP39WordsType                        = @"txt";
-const CFStringRef       WSBIP39SaltPrefix                       = CFSTR("mnemonic");
+const CFStringRef       WSBIP39SaltPrefix                       = CFSTR("witnesskey");
 const NSUInteger        WSBIP39SaltPrefixLength                 = 8;
 
 // adapted from: https://github.com/voisine/breadwallet/blob/master/BreadWallet/BRBIP39Mnemonic.m

@@ -16,6 +16,7 @@ NSString *WSNetworkTypeString(WSNetworkType type)
     dispatch_once(&onceToken, ^{
         strings = [[NSMutableDictionary alloc] initWithCapacity:3];
         strings[@(WSNetworkTypeMain)] = @"Main";
+        strings[@(WSNetworkTypeEmercoin)] = @"Emercoin";
         strings[@(WSNetworkTypeTestnet3)] = @"Testnet3";
         strings[@(WSNetworkTypeRegtest)] = @"Regtest";
     });

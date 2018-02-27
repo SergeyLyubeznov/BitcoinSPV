@@ -95,6 +95,7 @@
     const uint32_t lockTime = (uint32_t)[self.lockTime unsignedIntegerValue];
     
     WSSignedTransaction *transaction = [[WSSignedTransaction alloc] initWithVersion:version
+                                                                               time:0
                                                                        signedInputs:signedInputs
                                                                             outputs:outputs
                                                                            lockTime:lockTime

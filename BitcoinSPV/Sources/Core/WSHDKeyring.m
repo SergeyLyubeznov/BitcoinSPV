@@ -58,9 +58,6 @@
 
 @interface WSHDKeyring ()
 
-@property (nonatomic, strong) WSBIP32Key *extendedPrivateKey;
-@property (nonatomic, strong) WSBIP32Key *extendedPublicKey;
-
 @end
 
 @implementation WSHDKeyring

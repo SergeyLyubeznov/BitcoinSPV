@@ -178,7 +178,8 @@ static const NSTimeInterval     WSWebExplorerBiteasyYieldInterval           = 1.
             
             NSError *error;
             NSDictionary *keys = @{fromAddress: fromKey};
-            WSSignedTransaction *transaction = [builder signedTransactionWithInputKeys:keys error:&error];
+            
+            WSSignedTransaction *transaction = [builder signedTransactionWithInputKeys:keys error:&error param:parameters];
             if (!transaction) {
 //                DDLogDebug(@"#%u Sweep transaction error: %@", (unsigned long)numberOfTransactions, error);
                 

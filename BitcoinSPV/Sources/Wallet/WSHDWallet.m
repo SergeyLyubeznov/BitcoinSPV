@@ -254,6 +254,24 @@ NSString *WSHDWalletDefaultChainsPath(WSParameters *parameters)
     }
 }
 
+- (WSBIP32Key *)extendedPrivateKeyForAddress:(WSAddress *)address
+{
+    WSExceptionCheckIllegal(address);
+    
+    @synchronized (self) {
+        const NSUInteger externalAccount = [_allExternalAddresses indexOfObject:address];
+        if (externalAccount != NSNotFound) {
+            return [[self.safeExternalChain keyringForAccount:(uint32_t)externalAccount] extendedPrivateKey];
+        }
+        
+        const NSUInteger internalAccount = [_allInternalAddresses indexOfObject:address];
+        if (internalAccount != NSNotFound) {
+            return [[self.safeInternalChain keyringForAccount:(uint32_t)internalAccount] extendedPrivateKey];
+        }
+        return nil;
+    }
+}
+
 - (WSPublicKey *)publicKeyForAddress:(WSAddress *)address
 {
     WSExceptionCheckIllegal(address);
@@ -648,7 +666,7 @@ NSString *WSHDWalletDefaultChainsPath(WSParameters *parameters)
         }
     }
 
-    return [builder signedTransactionWithInputKeys:keys error:error];
+    return [builder signedTransactionWithInputKeys:keys error:error param:_parameters];
 }
 
 #pragma mark Serialization
@@ -822,7 +840,7 @@ NSString *WSHDWalletDefaultChainsPath(WSParameters *parameters)
         DDLogDebug(@"Used %lu/%lu accounts", (unsigned long)numberOfUsedAddresses, (unsigned long)targetAddresses.count);
         DDLogDebug(@"Current account set to first unused account (%u)", *currentAccount);
         
-        const NSUInteger watchedCount = _gapLimit + lookAhead;
+        const NSUInteger watchedCount = lookAhead; //_gapLimit + lookAhead;
         if (forced) {
             DDLogDebug(@"Forcing generation of %lu watched addresses", (unsigned long)watchedCount);
         }
@@ -847,7 +865,12 @@ NSString *WSHDWalletDefaultChainsPath(WSParameters *parameters)
         const NSUInteger lastGenAccount = accountOfFirstUnusedAddress + watchedCount; // excluded
         for (NSUInteger i = firstGenAccount; i < lastGenAccount; ++i) {
             WSAddress *address = [[targetChain publicKeyForAccount:(uint32_t)i] addressWithParameters:self.parameters];
+//            id<WSBIP32Keyring> keyring = [targetChain keyringForAccount:(uint32_t)i];
+//            WSBIP32Key *pubKey = [keyring extendedPublicKey];
+//            WSBIP32Key *privKey = [keyring extendedPrivateKey];
             [targetAddresses addObject:address];
+            //NSLog(address.description);
+            //NSLog(privKey.description);
         }
         
         __unused const NSUInteger expectedWatchedCount = lastGenAccount - *currentAccount;

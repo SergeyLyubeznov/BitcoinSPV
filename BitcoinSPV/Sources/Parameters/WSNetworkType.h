@@ -10,6 +10,7 @@
 
 typedef enum {
     WSNetworkTypeMain = 1,
+    WSNetworkTypeEmercoin,
     WSNetworkTypeTestnet3,
     WSNetworkTypeRegtest
 } WSNetworkType;

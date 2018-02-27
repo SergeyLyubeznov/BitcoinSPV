@@ -107,11 +107,15 @@ NSUInteger WSTransactionTypicalSize(NSUInteger numberOfInputs, NSUInteger number
     return (sizeof(uint32_t) + sizeof(uint32_t) + numberOfInputs * WSTransactionInputTypicalSize + numberOfOutputs * WSTransactionOutputTypicalSize);
 }
 
-NSUInteger WSTransactionEstimatedSize(NSOrderedSet *inputs, NSOrderedSet *outputs, NSArray *extraInputs, NSArray *extraOutputs, BOOL simulatingSignatures)
+NSUInteger WSTransactionEstimatedSize(NSOrderedSet *inputs, NSOrderedSet *outputs, NSArray *extraInputs, NSArray *extraOutputs, BOOL simulatingSignatures, BOOL addTime)
 {
     NSUInteger size = 0;
     
     size += sizeof(uint32_t); // version
+    
+    if (addTime) {
+        size += sizeof(uint32_t); // time
+    }
     
     size += WSBufferVarIntSize(inputs.count + extraInputs.count);
     if (simulatingSignatures) {

@@ -30,16 +30,22 @@
 #import "WSTransactionInput.h"
 #import "WSTransactionOutput.h"
 #import "WSHash256.h"
+#import "WSHash160.h"
 #import "WSScript.h"
 #import "WSKey.h"
 #import "WSPublicKey.h"
 #import "WSBitcoinConstants.h"
 #import "WSMacrosCore.h"
 #import "WSErrors.h"
+#import "WSParameters.h"
+
+const uint32_t constTime = 1510323021;
 
 @interface WSSignedTransaction ()
 
 @property (nonatomic, assign) uint32_t version;
+@property (nonatomic, assign) uint32_t time;
+@property (nonatomic, assign) WSParameters *parameters;
 @property (nonatomic, strong) NSOrderedSet *signedInputs;
 @property (nonatomic, strong) NSOrderedSet *outputs;
 @property (nonatomic, assign) uint32_t lockTime;
@@ -54,10 +60,23 @@
 
 - (instancetype)initWithSignedInputs:(NSOrderedSet *)inputs outputs:(NSOrderedSet *)outputs error:(NSError *__autoreleasing *)error
 {
-    return [self initWithVersion:WSTransactionVersion signedInputs:inputs outputs:outputs lockTime:WSTransactionDefaultLockTime error:error];
+    return [self initWithVersion:WSTransactionVersion time:0 signedInputs:inputs outputs:outputs lockTime:WSTransactionDefaultLockTime error:error];//initWithVersion:WSTransactionVersion signedInputs:inputs outputs:outputs lockTime:WSTransactionDefaultLockTime error:error];
 }
 
+//- (instancetype)initWithVersion:(uint32_t)version
+//                           time:(uint32_t)time
+//                   signedInputs:(NSOrderedSet *)inputs      // WSSignedTransactionInput
+//                        outputs:(NSOrderedSet *)outputs     // WSTransactionOutput
+//                       lockTime:(uint32_t)lockTime
+//                          error:(NSError *__autoreleasing *)error
+//{
+//    WSSignedTransaction *tx = [self initWithVersion:version signedInputs:inputs outputs:outputs lockTime:lockTime error:error];
+//    tx.time = time;
+//    return tx;
+//}
+
 - (instancetype)initWithVersion:(uint32_t)version
+                           time:(uint32_t)time
                    signedInputs:(NSOrderedSet *)inputs      // WSSignedTransactionInput
                         outputs:(NSOrderedSet *)outputs     // WSTransactionOutput
                        lockTime:(uint32_t)lockTime
@@ -68,16 +87,17 @@
     
     if ((self = [super init])) {
         self.version = version;
+        self.time = time;
         self.signedInputs = inputs;
         self.outputs = outputs;
         self.lockTime = lockTime;
-
+        
         WSBuffer *buffer = [self toBuffer];
-//        if (buffer.length > WSTransactionMaxSize) {
-//            WSErrorSet(error, WSErrorCodeInvalidTransaction, @"Transaction is too big (size: %u > %u)", buffer.length, WSTransactionMaxSize);
-//            return nil;
-//        }
-
+        //        if (buffer.length > WSTransactionMaxSize) {
+        //            WSErrorSet(error, WSErrorCodeInvalidTransaction, @"Transaction is too big (size: %u > %u)", buffer.length, WSTransactionMaxSize);
+        //            return nil;
+        //        }
+        
         self.txId = [buffer computeHash256];
         self.txIdPrefix = *(NSUInteger *)self.txId.bytes;
         self.size = buffer.length;
@@ -166,11 +186,24 @@
     return [input.outpoint isCoinbase];
 }
 
+- (void)addTime:(uint32_t)time {
+    self.time = time;
+}
+
+- (void)addParametetrs:(WSParameters *)parameters {
+    self.parameters = parameters;
+}
+
 #pragma mark WSBufferEncoder
 
 - (void)appendToMutableBuffer:(WSMutableBuffer *)buffer
 {
     [buffer appendUint32:self.version];
+    
+    if (self.time > 0) {
+        [buffer appendUint32:self.time];
+    }
+    
     [buffer appendVarInt:self.inputs.count];
     for (WSSignedTransactionInput *input in self.signedInputs) {
         [input appendToMutableBuffer:buffer];
@@ -193,10 +226,17 @@
 
 - (instancetype)initWithParameters:(WSParameters *)parameters buffer:(WSBuffer *)buffer from:(NSUInteger)from available:(NSUInteger)available error:(NSError *__autoreleasing *)error
 {
+    
     NSUInteger offset = from;
-
+    uint32_t time = 0;
+    
     const uint32_t version = [buffer uint32AtOffset:offset];
     offset += sizeof(uint32_t);
+    
+    if ([parameters networkType] == WSNetworkTypeEmercoin) {
+        time = [buffer uint32AtOffset:offset];
+        offset += sizeof(uint32_t);
+    }
     
     NSUInteger inputsCountLength;
     const NSUInteger inputsCount = (NSUInteger)[buffer varIntAtOffset:offset length:&inputsCountLength];
@@ -251,16 +291,18 @@
     }
     
     const uint32_t lockTime = [buffer uint32AtOffset:offset];
-
-    return [self initWithVersion:version signedInputs:inputs outputs:outputs lockTime:lockTime error:error];
+    
+    return [self initWithVersion:version time:time signedInputs:inputs outputs:outputs lockTime:lockTime error:error];
 }
 
 #pragma mark WSSized
 
 - (NSUInteger)estimatedSize
 {
+    BOOL addTime = self.time > 0;
+    
     if (self.size == 0) {
-        return WSTransactionEstimatedSize(self.inputs, self.outputs, nil, nil, NO);
+        return WSTransactionEstimatedSize(self.inputs, self.outputs, nil, nil, NO,addTime);
     }
     return self.size;
 }
@@ -271,6 +313,7 @@
 {
     NSMutableArray *tokens = [[NSMutableArray alloc] init];
     [tokens addObject:[NSString stringWithFormat:@"version = %u", self.version]];
+    [tokens addObject:[NSString stringWithFormat:@"time = %u", self.time]];
     [tokens addObject:[NSString stringWithFormat:@"id = %@", self.txId]];
     [tokens addObject:[NSString stringWithFormat:@"size = %lu bytes", (unsigned long)self.size]];
     [tokens addObject:[NSString stringWithFormat:@"coinbase = %@", (self.isCoinbase ? @"YES" : @"NO")]];
@@ -317,7 +360,7 @@
 - (void)addOutput:(WSTransactionOutput *)output
 {
     WSExceptionCheckIllegal(output);
-
+    
     [_outputs addObject:output];
 }
 
@@ -333,7 +376,7 @@
     if (inputValue < effectiveFee + WSTransactionMinOutValue) {
         return NO;
     }
-
+    
     const uint64_t outputValue = inputValue - effectiveFee;
     WSTransactionOutput *output = [[WSTransactionOutput alloc] initWithAddress:address value:outputValue];
     [self addOutput:output];
@@ -398,16 +441,17 @@
     return WSTransactionStandardRelayFee([self estimatedSize] + numberOfBytes);
 }
 
-- (WSSignedTransaction *)signedTransactionWithInputKeys:(NSDictionary *)keys error:(NSError *__autoreleasing *)error
+- (WSSignedTransaction *)signedTransactionWithInputKeys:(NSDictionary *)keys error:(NSError *__autoreleasing *)error param:(WSParameters *)param
 {
     WSExceptionCheckIllegal(keys.count > 0);
-
+    
     if ((self.signableInputs.count == 0) || (self.outputs.count == 0)) {
         WSErrorSet(error, WSErrorCodeInvalidTransaction, @"Empty inputs or outputs");
         return nil;
     }
     
     const WSTransactionSigHash hashFlags = WSTransactionSigHash_ALL;
+    uint32_t time = ([param networkType] == WSNetworkTypeEmercoin) ? [[[NSDate alloc] init] timeIntervalSince1970] : 0;
     
     NSMutableOrderedSet *signedInputs = [[NSMutableOrderedSet alloc] initWithCapacity:self.signableInputs.count];
     for (WSSignableTransactionInput *input in self.signableInputs) {
@@ -416,33 +460,37 @@
         if (!key) {
             WSErrorSetUserInfo(error, WSErrorCodeSignature, @{WSErrorInputAddressKey: inputAddress},
                                @"Missing key for input address %@", inputAddress);
-
+            
             return nil;
         }
-
-        WSBuffer *buffer = [self signableBufferForInput:input hashFlags:hashFlags];
-        WSHash256 *hash256 = [buffer computeHash256];
-
+        
+        WSBuffer *buffer = [self signableBufferForInput:input hashFlags:hashFlags time:time];
+        
+        WSHash256 *hash256 =  [buffer computeHash256];
+        
         WSSignedTransactionInput *signedInput = [input signedInputWithKey:key hash256:hash256 hashFlags:hashFlags];
         [signedInputs addObject:signedInput];
     }
     
-    return [[WSSignedTransaction alloc] initWithVersion:self.version signedInputs:signedInputs outputs:self.outputs lockTime:self.lockTime error:error];
+    return [[WSSignedTransaction alloc] initWithVersion:self.version time:time signedInputs:signedInputs outputs:self.outputs lockTime:self.lockTime error:error];//[[WSSignedTransaction alloc] initWithVersion:self.version signedInputs:signedInputs outputs:self.outputs lockTime:self.lockTime error:error];
 }
 
-- (WSBuffer *)signableBufferForInput:(WSSignableTransactionInput *)signableInput hashFlags:(WSTransactionSigHash)hashFlags
+- (WSBuffer *)signableBufferForInput:(WSSignableTransactionInput *)signableInput hashFlags:(WSTransactionSigHash)hashFlags time:(uint32_t)time
 {
     NSParameterAssert(signableInput != nil);
     NSAssert([self.signableInputs containsObject:signableInput], @"Transaction doesn't contain this input");
-
+    
     WSMutableBuffer *buffer = [[WSMutableBuffer alloc] init];
-
+    
     [buffer appendUint32:self.version];
-
+    if (time > 0) {
+        [buffer appendUint32:time];
+    }
+    
     [buffer appendVarInt:self.signableInputs.count];
     for (WSSignableTransactionInput *input in self.signableInputs) {
         [input.outpoint appendToMutableBuffer:buffer];
-
+        
         // include previous output script for the signable input
         if (input == signableInput) {
             [buffer appendVarInt:[signableInput.script estimatedSize]];
@@ -452,18 +500,18 @@
         else {
             [buffer appendVarInt:0];
         }
-
+        
         [buffer appendUint32:input.sequence];
     }
-
+    
     [buffer appendVarInt:self.outputs.count];
     for (WSTransactionOutput *output in self.outputs) {
         [output appendToMutableBuffer:buffer];
     }
-
+    
     [buffer appendUint32:self.lockTime];
     [buffer appendUint32:hashFlags];
-
+    
     return buffer;
 }
 
@@ -471,14 +519,15 @@
 
 - (NSUInteger)estimatedSize
 {
-    return WSTransactionEstimatedSize(self.signableInputs, self.outputs, nil, nil, YES);
+    return WSTransactionEstimatedSize(self.signableInputs, self.outputs, nil, nil, YES, NO);
 }
 
 - (NSUInteger)estimatedSizeWithExtraInputs:(NSArray *)inputs
 {
     NSParameterAssert(inputs);
     
-    return WSTransactionEstimatedSize(self.signableInputs, self.outputs, inputs, nil, YES);
+    return WSTransactionEstimatedSize(self.signableInputs, self.outputs, inputs, nil, YES, NO);
 }
 
 @end
+

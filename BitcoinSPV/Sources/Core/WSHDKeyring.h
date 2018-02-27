@@ -34,6 +34,8 @@
 #pragma mark -
 
 @interface WSHDKeyring : NSObject <WSBIP32Keyring>
+@property (nonatomic, strong) WSBIP32Key *extendedPrivateKey;
+@property (nonatomic, strong) WSBIP32Key *extendedPublicKey;
 
 - (instancetype)initWithParameters:(WSParameters *)parameters mnemonic:(NSString *)mnemonic;
 - (instancetype)initWithParameters:(WSParameters *)parameters seed:(WSSeed *)seed;

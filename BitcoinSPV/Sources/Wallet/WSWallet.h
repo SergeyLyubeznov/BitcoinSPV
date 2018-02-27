@@ -39,6 +39,7 @@
 @class WSBloomFilter;
 @class WSBIP37FilterParameters;
 @class WSTransactionMetadata;
+@class WSBIP32Key;
 
 #pragma mark -
 
@@ -64,6 +65,7 @@ extern NSString *const WSWalletTransactionsMetadataKey;
 - (NSOrderedSet *)allReceiveAddresses;      // WSAddress
 - (NSOrderedSet *)allChangeAddresses;       // WSAddress
 - (WSKey *)privateKeyForAddress:(WSAddress *)address;
+- (WSBIP32Key *)extendedPrivateKeyForAddress:(WSAddress *)address;
 - (WSPublicKey *)publicKeyForAddress:(WSAddress *)address;
 - (BOOL)isWalletAddress:(WSAddress *)address;
 
