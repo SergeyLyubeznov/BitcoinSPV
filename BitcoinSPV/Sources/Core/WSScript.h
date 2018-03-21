@@ -64,6 +64,8 @@ typedef enum {
     WSScriptOpcode_OP_15                = 0x5f,
     WSScriptOpcode_OP_16                = 0x60,
     WSScriptOpcode_OP_RETURN            = 0x6a,
+    WSScriptOpcode_DROP                 = 0x75,
+    WSScriptOpcode_DROP_2               = 0x6d,
     WSScriptOpcode_DUP                  = 0x76,
     WSScriptOpcode_EQUAL                = 0x87,
     WSScriptOpcode_EQUALVERIFY          = 0x88,
@@ -71,7 +73,10 @@ typedef enum {
     WSScriptOpcode_CHECKSIG             = 0xac,
     WSScriptOpcode_CHECKSIGVERIFY       = 0xad,
     WSScriptOpcode_CHECKMULTISIG        = 0xae,
-    WSScriptOpcode_CHECKMULTISIGVERIFY  = 0xaf
+    WSScriptOpcode_CHECKMULTISIGVERIFY  = 0xaf,
+    WSScriptOpcode_NAME_NEW             = 0x01,
+    WSScriptOpcode_NAME_UPDATE          = 0x02,
+    WSScriptOpcode_NAME_DELETE          = 0x03
 } WSScriptOpcode;
 
 NSString *WSScriptOpcodeString(WSScriptOpcode opcode);
@@ -91,6 +96,7 @@ NSInteger WSScriptOpcodeToValue(WSScriptOpcode opcode);
 @interface WSScript : NSObject <NSCopying, WSBufferEncoder, WSBufferDecoder, WSSized>
 
 + (instancetype)scriptWithAddress:(WSAddress *)address;
++ (instancetype)scriptWithAddress:(WSAddress *)address op:(WSScriptOpcode)op name:(NSString *)name value:(NSString *)value rentalDays:(NSUInteger)rentalDays;
 + (instancetype)scriptWithSignature:(NSData *)signature publicKey:(WSPublicKey *)publicKey;
 + (instancetype)scriptWithSignatures:(NSArray *)signatures publicKeys:(NSArray *)publicKeys;
 + (instancetype)redeemScriptWithNumberOfSignatures:(NSUInteger)numberOfSignatures publicKeys:(NSArray *)publicKeys;
@@ -131,6 +137,9 @@ NSInteger WSScriptOpcodeToValue(WSScriptOpcode opcode);
 
 - (instancetype)init;
 - (instancetype)initWithAddress:(WSAddress *)address; // P2PKH or P2SH
+//Emercoin NVS
+- (instancetype)initWithAddress:(WSAddress *)address op:(WSScriptOpcode)op name:(NSString *)name value:(NSString *)value rentalDays:(NSUInteger)rentalDays;
+
 - (instancetype)initWithSignature:(NSData *)signature publicKey:(WSPublicKey *)publicKey;
 - (instancetype)initWithSignatures:(NSArray *)signatures publicKeys:(NSArray *)publicKeys;
 - (instancetype)initWithRedeemNumberOfSignatures:(NSUInteger)numberOfSignatures publicKeys:(NSArray *)publicKeys;
@@ -144,6 +153,9 @@ NSInteger WSScriptOpcodeToValue(WSScriptOpcode opcode);
 
 - (WSScript *)build;
 - (WSScript *)buildWithCopy;
+
+//Emercoin NVS
+- (void)appendScriptForAddress:(WSAddress *)address op:(WSScriptOpcode)op name:(NSString *)name value:(NSString *)value rentalDays:(NSUInteger)rentalDays;
 
 @end
 

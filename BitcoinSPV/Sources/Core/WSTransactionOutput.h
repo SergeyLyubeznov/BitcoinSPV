@@ -29,6 +29,7 @@
 
 #import "WSBuffer.h"
 #import "WSSized.h"
+#import "WSScript.h"
 
 @class WSParameters;
 @class WSScript;
@@ -38,6 +39,8 @@
 
 - (instancetype)initWithParameters:(WSParameters *)parameters script:(WSScript *)script value:(uint64_t)value;
 - (instancetype)initWithAddress:(WSAddress *)address value:(uint64_t)value;
+//EmercoinNVS
+- (instancetype)initWithAddress:(WSAddress *)address value:(uint64_t)value op:(WSScriptOpcode)op name:(NSString *)name valueNVS:(NSString *)valueNVS rentalDays:(NSUInteger)rentalDays;
 - (WSParameters *)parameters;
 - (WSScript *)script;
 - (WSAddress *)address;

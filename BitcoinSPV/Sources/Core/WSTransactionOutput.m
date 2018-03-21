@@ -68,6 +68,14 @@
     }
     return self;
 }
+//Emercoin NVS
+- (instancetype)initWithAddress:(WSAddress *)address value:(uint64_t)value op:(WSScriptOpcode)op name:(NSString *)name valueNVS:(NSString *)valueNVS rentalDays:(NSUInteger)rentalDays {
+    
+    if (self = [[WSTransactionOutput alloc] initWithAddress:address value:value]) {
+        self.script = [WSScript scriptWithAddress:address op:op name:name value:valueNVS rentalDays:rentalDays];
+    }
+    return self;
+}
 
 - (WSParameters *)parameters
 {

@@ -68,6 +68,10 @@
 {
     return [[[WSScriptBuilder alloc] initWithAddress:address] build];
 }
+//Emercoin NVS
++ (instancetype)scriptWithAddress:(WSAddress *)address op:(WSScriptOpcode)op name:(NSString *)name value:(NSString *)value rentalDays:(NSUInteger)rentalDays {
+    return [[[WSScriptBuilder alloc] initWithAddress:address op:op name:name value:value rentalDays:rentalDays] build];
+}
 
 + (instancetype)scriptWithSignature:(NSData *)signature publicKey:(WSPublicKey *)publicKey
 {
@@ -564,6 +568,16 @@
     return self;
 }
 
+- (instancetype)initWithAddress:(WSAddress *)address op:(WSScriptOpcode)op name:(NSString *)name value:(NSString *)value rentalDays:(NSUInteger)rentalDays {
+ 
+    WSExceptionCheckIllegal(address);
+    
+    if ((self = [self init])) {
+        [self appendScriptForAddress:address op:op name:name value:value rentalDays:rentalDays];
+    }
+    return self;
+}
+             
 - (instancetype)initWithAddress:(WSAddress *)address
 {
     WSExceptionCheckIllegal(address);
@@ -674,6 +688,56 @@
         [self appendPushData:address.hash160.data];
         [self appendOpcode:WSScriptOpcode_EQUAL];
     }
+}
+//Emercoin NVS
+- (void)appendScriptForAddress:(WSAddress *)address op:(WSScriptOpcode)op name:(NSString *)name value:(NSString *)value rentalDays:(NSUInteger)rentalDays {
+    
+    NSData *nameData = [name dataUsingEncoding:NSASCIIStringEncoding];
+    NSData *valueData = [value dataUsingEncoding:NSASCIIStringEncoding];
+    NSData *daysData = [NSData dataWithBytes: &rentalDays length: sizeof(op)];
+    
+    if (op == WSScriptOpcode_NAME_DELETE) {
+        [self appendOpcode:WSScriptOpcode_OP_3];
+        [self appendOpcode:WSScriptOpcode_DROP];
+        [self appendPushData:nameData];
+        [self appendOpcode:WSScriptOpcode_DROP];
+        
+    } else {
+        
+        WSScriptOpcode OP_CODE = (op == WSScriptOpcode_NAME_UPDATE) ? WSScriptOpcode_OP_2 : WSScriptOpcode_OP_1;
+        
+        [self appendOpcode:OP_CODE];
+        [self appendOpcode:WSScriptOpcode_DROP];
+        [self appendPushData:nameData];
+        [self appendPushData:daysData];
+        [self appendOpcode:WSScriptOpcode_DROP_2];
+        
+        double subPart = 520.0;
+        NSUInteger length = [value lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
+        NSUInteger nChunks = ceil(length / subPart);
+
+        for (NSUInteger i = 0; i < nChunks; i++) {
+            
+            NSUInteger start = i*subPart;
+            
+            NSRange subRange = NSMakeRange(start, MIN(length - start,subPart));
+            NSData *subData = [valueData subdataWithRange:subRange];
+            [self appendPushData:subData];
+        }
+        
+        for (unsigned int i = 0; i < nChunks / 2; i++)
+            [self appendOpcode:WSScriptOpcode_DROP_2];
+        
+        if (nChunks % 2 != 0)
+           [self appendOpcode:WSScriptOpcode_DROP];
+    }
+    
+    [self appendOpcode:WSScriptOpcode_DUP];
+    [self appendOpcode:WSScriptOpcode_HASH160];
+    [self appendPushData:address.hash160.data];
+    [self appendOpcode:WSScriptOpcode_EQUALVERIFY];
+    [self appendOpcode:WSScriptOpcode_CHECKSIG];
+    
 }
 
 - (void)appendScript:(WSScript *)script
